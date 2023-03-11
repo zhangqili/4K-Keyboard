@@ -53,7 +53,10 @@ dkms.conf
 
 # MDK-ARM
 *.crf
+!startup_stm32f303xc.s
+!stm32f303-osu-4k-keyboard.uvoptx
+!stm32f303-osu-4k-keyboard.uvprojx
+!startup_stm32f030xc.s
+!stm32f030-osu-4k-keyboard.uvoptx
+!stm32f030-osu-4k-keyboard.uvprojx
 MDK-ARM/
-!MDK-ARM/stm32f303-osu-4k-keyboard.uvoptx
-!MDK-ARM/stm32f303-osu-4k-keyboard.uvprojx
-!MDK-ARM/startup_stm32f303xc.s
