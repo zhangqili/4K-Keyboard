@@ -50,3 +50,10 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# MDK-ARM
+*.crf
+MDK-ARM/
+!stm32f303-osu-4k-keyboard.uvoptx
+!stm32f303-osu-4k-keyboard.uvprojx
+!startup_stm32f303xc.s
