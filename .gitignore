@@ -60,3 +60,7 @@ dkms.conf
 !stm32f030-osu-4k-keyboard.uvoptx
 !stm32f030-osu-4k-keyboard.uvprojx
 MDK-ARM/
+
+# CAD
+*.bak
+*.log
