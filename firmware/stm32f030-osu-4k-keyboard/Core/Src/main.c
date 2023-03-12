@@ -57,7 +57,7 @@ typedef struct
 #define TILE_WIDTH 10
 #define NUMBER_STRING_LENGTH 16
 #define REFRESH_RATE 48
-#define KPS_HISTORY_LENGTH 65
+#define KPS_HISTORY_LENGTH 64
 //#define TILE_LENGTH 56
 #define CHART_HEIGHT (HEIGHT-MARGIN_DOWN-MARGIN_UP)
 #define TILE1 0
@@ -78,7 +78,7 @@ typedef struct
 u8g2_t u8g2;
 uint16_t n = 0;
 uint16_t i = 0;
-uint8_t j = 0;
+int8_t j = 0;
 uint16_t t = 0;
 uint16_t fps = 0;
 uint16_t count = 0;
@@ -160,7 +160,8 @@ uint8_t u8x8_stm32_gpio_and_delay(U8X8_UNUSED u8x8_t *u8x8,
   return 1;
 }
 
-void refresh()
+
+void update()
 {
 
   //keys[0]=roll();
@@ -212,7 +213,6 @@ void refresh()
   {
     keys1[3]=0;
   }
-  u8g2_ClearBuffer(&u8g2);
   lines[0].latter >>= 1;
   lines[1].latter >>= 1;
   lines[2].latter >>= 1;
@@ -249,6 +249,24 @@ void refresh()
     //counts[3]++;
     lines[3].former |= BEGINBIT;
   }
+  kps=0;
+  for(i=0;i<REFRESH_RATE;i++)
+    kps+=kpsqueue[i];
+  if (kps>kpsmaxps)
+    kpsmaxps=kps;
+  kpsmax1=1;
+  
+  
+  sprintf(num1,"%5d",counts[0]);
+  sprintf(num2,"%5d",counts[1]);
+  sprintf(num3,"%5d",counts[2]);
+  sprintf(num4,"%5d",counts[3]);
+  
+}
+
+void refresh()
+{
+  u8g2_ClearBuffer(&u8g2);
   
   
   for (i=0;i<HALF_WIDTH;i++)
@@ -271,43 +289,35 @@ void refresh()
     //  u8g2_DrawVLine(&u8g2,i+MARGIN_LEFT+HALF_WIDTH,TILE4+PADDING_UP,TILE_WIDTH);
   }
   
-  kps=0;
-  for(i=0;i<REFRESH_RATE;i++)
-    kps+=kpsqueue[i];
-  if (kps>kpsmaxps)
-    kpsmaxps=kps;
-  kpsmax1=1;
-  for (i=0;i<KPS_HISTORY_LENGTH-2;i++)
+  for (i=0;i<KPS_HISTORY_LENGTH;i++)
   {
-		j = i + 1 < kpshistoryi ? kpshistoryi - i -1: KPS_HISTORY_LENGTH + kpshistoryi - i - 2;
-    /*
+		j = kpshistoryi-i;
     
-    if(i+1<kpshistoryi)
+    if(j>0)
     {        
-      floatlist[0]=kpshistory[kpshistoryi - i -1];
-      floatlist[1]=kpshistory[kpshistoryi - i -2];
+      floatlist[0]=kpshistory[j];
+      floatlist[1]=kpshistory[j-1];
     }
-    if(i+1==kpshistoryi)
+    if(j==0)
     {        
-      floatlist[0]=kpshistory[kpshistoryi - i -1];
-      floatlist[1]=kpshistory[KPS_HISTORY_LENGTH + kpshistoryi - i - 3];
+      floatlist[0]=kpshistory[0];
+      floatlist[1]=kpshistory[KPS_HISTORY_LENGTH-1];
     }
-    if(i+1>kpshistoryi)
+    if(j<0)
     {
-      floatlist[1]=kpshistory[KPS_HISTORY_LENGTH + kpshistoryi - i - 2];
-      floatlist[1]=kpshistory[KPS_HISTORY_LENGTH + kpshistoryi - i - 3];
+      floatlist[0]=kpshistory[KPS_HISTORY_LENGTH + j];
+      floatlist[1]=kpshistory[KPS_HISTORY_LENGTH + j-1];
     }
-    */
-    floatlist[0]=kpshistory[j];
-    floatlist[1]=kpshistory[j-1];
+    //floatlist[0]=kpshistory[j];
+    //floatlist[1]=kpshistory[j-1];
     floatlist[2]=kpsmax;
     //u8g2_DrawLine(&u8g2,64-i*2,35,64-(1+i)*2,35);
     if(floatlist[0]>floatlist[2] || floatlist[1]>floatlist[2])
       u8g2_DrawLine(&u8g2,KPS_HISTORY_LENGTH-2-i,MARGIN_UP,KPS_HISTORY_LENGTH-3-i,MARGIN_UP);
     else
       u8g2_DrawLine(&u8g2,
-        KPS_HISTORY_LENGTH-2-i,CHART_HEIGHT+MARGIN_UP-(uint8_t)(floatlist[3]*(floatlist[0]/floatlist[2])),
-        KPS_HISTORY_LENGTH-3-i,CHART_HEIGHT+MARGIN_UP-(uint8_t)(floatlist[3]*(floatlist[1])/floatlist[2]));
+        KPS_HISTORY_LENGTH-i,CHART_HEIGHT+MARGIN_UP-(uint8_t)(floatlist[3]*(floatlist[0]/floatlist[2])),
+        KPS_HISTORY_LENGTH-i-1,CHART_HEIGHT+MARGIN_UP-(uint8_t)(floatlist[3]*(floatlist[1]/floatlist[2])));
 
     if (kpsmax1<kpshistory[i])
       kpsmax1=kpshistory[i];
@@ -320,11 +330,6 @@ void refresh()
   u8g2_DrawStr(&u8g2,32,MARGIN_UP-1,"MAX:");
   u8g2_DrawStr(&u8g2,96,MARGIN_UP-1,"FPS:");
   u8g2_SetFont(&u8g2, u8g2_font_6x13_tf);
-  sprintf(num1,"%5d",counts[0]);
-  sprintf(num2,"%5d",counts[1]);
-  sprintf(num3,"%5d",counts[2]);
-  sprintf(num4,"%5d",counts[3]);
-  
   u8g2_DrawStr(&u8g2,2,63,num1);
   u8g2_DrawStr(&u8g2,34,63,num2);
   u8g2_DrawStr(&u8g2,66,63,num3);
@@ -349,6 +354,17 @@ void refresh()
   {
     kpsi=0;
   }
+  /*
+  count++;
+  if(count>=2)
+  {
+    count=0;
+    kpshistory[kpshistoryi]=kps;
+    kpshistoryi++;
+    if(kpshistoryi>=KPS_HISTORY_LENGTH)
+      kpshistoryi=0;
+  }
+  */
 }
 
 /* USER CODE END 0 */
@@ -387,7 +403,7 @@ int main(void)
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
   MD_OLED_RST_Set();
-  floatlist[3]=(float)CHART_HEIGHT;
+  floatlist[3]=(float)(CHART_HEIGHT-1);
   
   u8g2_Setup_ssd1306_128x64_noname_f(&u8g2, U8G2_R0, u8x8_byte_4wire_hw_spi , u8x8_stm32_gpio_and_delay); // 初始化 u8g2 结构体
   u8g2_InitDisplay(&u8g2);                                                                       // 根据所选的芯片进行初始化工作，初始化完成后，显示器处于关闭状态
@@ -464,6 +480,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   if (htim->Instance==TIM3)
   {
+    update();
     refresh();
   }
   if (htim->Instance==TIM6)
