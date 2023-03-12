@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "iwdg.h"
 #include "spi.h"
 #include "tim.h"
 #include "usart.h"
@@ -57,7 +58,7 @@ typedef struct
 #define TILE_WIDTH 10
 #define NUMBER_STRING_LENGTH 16
 #define REFRESH_RATE 48
-#define KPS_HISTORY_LENGTH 64
+#define KPS_HISTORY_LENGTH 65
 //#define TILE_LENGTH 56
 #define CHART_HEIGHT (HEIGHT-MARGIN_DOWN-MARGIN_UP)
 #define TILE1 0
@@ -254,7 +255,7 @@ void update()
     kps+=kpsqueue[i];
   if (kps>kpsmaxps)
     kpsmaxps=kps;
-  kpsmax1=1;
+  kpsmax1=0;
   
   
   sprintf(num1,"%5d",counts[0]);
@@ -289,35 +290,38 @@ void refresh()
     //  u8g2_DrawVLine(&u8g2,i+MARGIN_LEFT+HALF_WIDTH,TILE4+PADDING_UP,TILE_WIDTH);
   }
   
-  for (i=0;i<KPS_HISTORY_LENGTH;i++)
+  floatlist[2]=kpsmax;
+  for (i=0;i<KPS_HISTORY_LENGTH-1;i++)
   {
-		j = kpshistoryi-i;
-    
-    if(j>0)
-    {        
-      floatlist[0]=kpshistory[j];
-      floatlist[1]=kpshistory[j-1];
-    }
-    if(j==0)
-    {        
-      floatlist[0]=kpshistory[0];
-      floatlist[1]=kpshistory[KPS_HISTORY_LENGTH-1];
-    }
-    if(j<0)
+    if(kpsmax)
     {
-      floatlist[0]=kpshistory[KPS_HISTORY_LENGTH + j];
-      floatlist[1]=kpshistory[KPS_HISTORY_LENGTH + j-1];
+      j = kpshistoryi-i-1;
+        
+      if(j>0)
+      {        
+        floatlist[0]=kpshistory[j];
+        floatlist[1]=kpshistory[j-1];
+      }
+      if(j==0)
+      {        
+        floatlist[0]=kpshistory[0];
+        floatlist[1]=kpshistory[KPS_HISTORY_LENGTH-1];
+      }
+      if(j<0)
+      {
+        floatlist[0]=kpshistory[KPS_HISTORY_LENGTH + j];
+        floatlist[1]=kpshistory[KPS_HISTORY_LENGTH + j-1];
+      }
+      //floatlist[0]=kpshistory[j];
+      //floatlist[1]=kpshistory[j-1];
+      //u8g2_DrawLine(&u8g2,64-i*2,35,64-(1+i)*2,35);
+      if(floatlist[0]>floatlist[2] || floatlist[1]>floatlist[2])
+        u8g2_DrawLine(&u8g2,KPS_HISTORY_LENGTH-i,MARGIN_UP,KPS_HISTORY_LENGTH-i-1,MARGIN_UP);
+      else
+        u8g2_DrawLine(&u8g2,
+          KPS_HISTORY_LENGTH-i-1,CHART_HEIGHT+MARGIN_UP-(uint8_t)(floatlist[3]*(floatlist[0]/floatlist[2])),
+          KPS_HISTORY_LENGTH-i-2,CHART_HEIGHT+MARGIN_UP-(uint8_t)(floatlist[3]*(floatlist[1]/floatlist[2])));
     }
-    //floatlist[0]=kpshistory[j];
-    //floatlist[1]=kpshistory[j-1];
-    floatlist[2]=kpsmax;
-    //u8g2_DrawLine(&u8g2,64-i*2,35,64-(1+i)*2,35);
-    if(floatlist[0]>floatlist[2] || floatlist[1]>floatlist[2])
-      u8g2_DrawLine(&u8g2,KPS_HISTORY_LENGTH-2-i,MARGIN_UP,KPS_HISTORY_LENGTH-3-i,MARGIN_UP);
-    else
-      u8g2_DrawLine(&u8g2,
-        KPS_HISTORY_LENGTH-i,CHART_HEIGHT+MARGIN_UP-(uint8_t)(floatlist[3]*(floatlist[0]/floatlist[2])),
-        KPS_HISTORY_LENGTH-i-1,CHART_HEIGHT+MARGIN_UP-(uint8_t)(floatlist[3]*(floatlist[1]/floatlist[2])));
 
     if (kpsmax1<kpshistory[i])
       kpsmax1=kpshistory[i];
@@ -401,6 +405,7 @@ int main(void)
   MX_TIM3_Init();
   MX_TIM6_Init();
   MX_USART1_UART_Init();
+  MX_IWDG_Init();
   /* USER CODE BEGIN 2 */
   MD_OLED_RST_Set();
   floatlist[3]=(float)(CHART_HEIGHT-1);
@@ -443,9 +448,10 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_LSI;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
   RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL6;
@@ -482,14 +488,17 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   {
     update();
     refresh();
+    HAL_IWDG_Refresh(&hiwdg);
   }
   if (htim->Instance==TIM6)
   {
     sprintf(str,"%3d",fps);
+    
     kpshistory[kpshistoryi]=kpsmaxps;
     kpshistoryi++;
     if(kpshistoryi>=KPS_HISTORY_LENGTH)
       kpshistoryi=0;
+    
     fps=0;
     kpsmaxps=0;
   }
