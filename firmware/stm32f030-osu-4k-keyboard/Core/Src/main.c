@@ -43,29 +43,30 @@ typedef struct
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define MD_OLED_RST_Clr() HAL_GPIO_WritePin(OLED_RES_GPIO_Port,OLED_RES_Pin,GPIO_PIN_RESET) //oled 复位端口操作
-#define MD_OLED_RST_Set() HAL_GPIO_WritePin(OLED_RES_GPIO_Port,OLED_RES_Pin,GPIO_PIN_SET)
-#define FONT u8g2_font_6x13B_tf
-#define WIDTH 128
-#define HEIGHT 64
-#define MARGIN_LEFT 64
-#define PADDING_UP 0
-#define MARGIN_UP 12
-#define MARGIN_DOWN 12
-#define HALF_WIDTH 64
-#define BEGINBIT 0x8000000000000000
-#define ENDBIT (0x0000000000000001<<(MARGIN_LEFT/2))
-#define TILE_WIDTH 10
-#define NUMBER_STRING_LENGTH 16
-#define REFRESH_RATE 48
-#define KPS_HISTORY_LENGTH 65
-//#define TILE_LENGTH 56
-#define CHART_HEIGHT (HEIGHT-MARGIN_DOWN-MARGIN_UP)
-#define TILE1 0
-#define TILE2 10
-#define TILE3 20
-#define TILE4 30
-#define roll() rand()%2;
+#define MD_OLED_RST_Clr()     HAL_GPIO_WritePin(OLED_RES_GPIO_Port,OLED_RES_Pin,GPIO_PIN_RESET) //oled 复位端口操作
+#define MD_OLED_RST_Set()     HAL_GPIO_WritePin(OLED_RES_GPIO_Port,OLED_RES_Pin,GPIO_PIN_SET)
+#define FONT                  u8g2_font_6x13B_tf
+#define WIDTH                 128
+#define HEIGHT                64
+#define MARGIN_LEFT           64
+#define PADDING_UP            0
+#define MARGIN_UP             12
+#define MARGIN_DOWN           12
+#define HALF_WIDTH            64
+#define BEGINBIT              0x8000000000000000
+#define ENDBIT                (0x0000000000000001<<(MARGIN_LEFT/2))
+#define TILE_WIDTH            10
+#define NUMBER_STRING_LENGTH  16
+#define REFRESH_RATE          48
+#define KPS_HISTORY_LENGTH    65
+//#define TILE_LENGTH         56
+#define CHART_HEIGHT          (HEIGHT-MARGIN_DOWN-MARGIN_UP)
+#define TILE1                 0
+#define TILE2                 10
+#define TILE3                 20
+#define TILE4                 30
+#define SCREEN_REST_TIME      60
+#define roll()                rand()%2;
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -95,6 +96,7 @@ uint8_t kpsi = 0;
 uint8_t kpsmax = 1;
 uint8_t kpsmaxps = 0;
 uint8_t kpsmax1 = 1;
+uint8_t displayon = SCREEN_REST_TIME;
 uint32_t counts[4] = {0,0,0,0};
 uint8_t num1[NUMBER_STRING_LENGTH] = {0};
 uint8_t num2[NUMBER_STRING_LENGTH] = {0};
@@ -268,8 +270,11 @@ void update()
 void refresh()
 {
   u8g2_ClearBuffer(&u8g2);
-  
-  
+  if(!displayon)
+  {
+    u8g2_SendBuffer(&u8g2);
+    return;
+  }
   for (i=0;i<HALF_WIDTH;i++)
   {
     if ((lines[0].former<<i)&BEGINBIT)
@@ -489,11 +494,14 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     update();
     refresh();
     HAL_IWDG_Refresh(&hiwdg);
+    if(kpsmax||(uint8_t)(~rec_buf[0]))
+      displayon=SCREEN_REST_TIME;
   }
   if (htim->Instance==TIM6)
   {
     sprintf(str,"%3d",fps);
-    
+    if(displayon)
+      displayon--;
     kpshistory[kpshistoryi]=kpsmaxps;
     kpshistoryi++;
     if(kpshistoryi>=KPS_HISTORY_LENGTH)

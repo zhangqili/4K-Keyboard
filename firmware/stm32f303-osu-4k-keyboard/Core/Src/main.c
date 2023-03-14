@@ -323,6 +323,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     keys[1]=KEY2;
     keys[2]=KEY3;
     keys[3]=KEY4;
+    keys[4]=FUNCTION_KEY1;
+    keys[5]=FUNCTION_KEY2;
+    keys[6]=FUNCTION_KEY3;
+    keys[7]=FUNCTION_KEY4;
     keys[8]=KNOB;
     keyBoardHIDsub.KEYCODE1=keys[0]?0:KEY1_BINDING;
     keyBoardHIDsub.KEYCODE2=keys[1]?0:KEY2_BINDING;
@@ -343,8 +347,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     if(count>=10)
     {
       count=0;
-      buf=keys[0]<<3|keys[1]<<2|keys[2]<<1|keys[3];
-      HAL_UART_Transmit(&huart1,&buf,1,0xff);
+      buf=keys[0]<<3|keys[1]<<2|keys[2]<<1|keys[3]|
+          keys[4]<<7|keys[5]<<6|keys[6]<<5|keys[7]<<4;
+      HAL_UART_Transmit(&huart1,&buf,1,10);
     }
   }
 }
