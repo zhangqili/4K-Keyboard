@@ -66,6 +66,7 @@ typedef struct
 #define TILE3                 20
 #define TILE4                 30
 #define SCREEN_REST_TIME      60
+#define _SCREEN_REST_ON
 #define roll()                rand()%2;
 /* USER CODE END PD */
 
@@ -270,11 +271,13 @@ void update()
 void refresh()
 {
   u8g2_ClearBuffer(&u8g2);
+#ifdef _SCREEN_REST_ON
   if(!displayon)
   {
     u8g2_SendBuffer(&u8g2);
     return;
   }
+#endif
   for (i=0;i<HALF_WIDTH;i++)
   {
     if ((lines[0].former<<i)&BEGINBIT)
