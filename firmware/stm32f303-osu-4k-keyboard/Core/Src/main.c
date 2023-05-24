@@ -101,7 +101,7 @@ typedef struct
 /* USER CODE BEGIN PV */
 uint8_t buf=0xff;
 uint8_t count=0;
-uint8_t keys[10]={0};
+uint8_t keys[10]={1};
 uint8_t ec11flag=0;
 //uint8_t spi_sw_i=0;
 //uint8_t spi_sw_j=0;
@@ -218,8 +218,10 @@ int main(void)
   MX_TIM8_Init();
   MX_USART1_UART_Init();
   MX_USB_DEVICE_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim7);
+  HAL_TIM_Encoder_Start_IT(&htim3,TIM_CHANNEL_1);
   HAL_TIMEx_PWMN_Start_DMA(&htim8,TIM_CHANNEL_3,RGB_buffer,RGB_BUFFER_LENGTH);
   for (uint8_t i=1;i<127;i++)
   {
@@ -227,7 +229,7 @@ int main(void)
     Set_RGB(i,i,i,1);
     Set_RGB(i,i,i,2);
     Set_RGB(i,i,i,3);
-    HAL_Delay(5);
+    HAL_Delay(1);
   }
   for (uint8_t i=128;i>0;i--)
   {
@@ -235,7 +237,7 @@ int main(void)
     Set_RGB(i,i,i,1);
     Set_RGB(i,i,i,2);
     Set_RGB(i,i,i,3);
-    HAL_Delay(5);
+    HAL_Delay(1);
   }
 
   /* USER CODE END 2 */
@@ -332,6 +334,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     keyBoardHIDsub.KEYCODE2=keys[1]?0:KEY2_BINDING;
     keyBoardHIDsub.KEYCODE3=keys[2]?0:KEY3_BINDING;
     keyBoardHIDsub.KEYCODE4=keys[3]?0:KEY4_BINDING;
+    keyBoardHIDsub.KEYCODE1=keys[0]?keys[4]?0:0x35:keyBoardHIDsub.KEYCODE1;//`
+    //keyBoardHIDsub.MODIFIER=keys[0]?keys[4]?0:0x80:keyBoardHIDsub.MODIFIER;
+    keyBoardHIDsub.KEYCODE2=keys[1]?keys[5]?0:0x2b:keyBoardHIDsub.KEYCODE2;//Tab
+    keyBoardHIDsub.KEYCODE3=keys[2]?keys[6]?0:0x3b:keyBoardHIDsub.KEYCODE3;//F2
+    keyBoardHIDsub.KEYCODE4=keys[3]?keys[7]?0:0x3b:keyBoardHIDsub.KEYCODE4;//Shift+F2
+    keyBoardHIDsub.MODIFIER=keys[3]?keys[7]?0:0x02:keyBoardHIDsub.MODIFIER;
     keyBoardHIDsub.KEYCODE5=keys[8]?0:0x29;
     if(ec11flag)
     {
@@ -354,13 +362,21 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   }
 }
 
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 {
-  if (GPIO_Pin & EC11_A_Pin && !ec11flag)
-  {
-    keys[9]=EC11_B;
-    ec11flag=25;
-  }
+    if(htim == &htim3)
+    {
+        if(htim->Instance->CR1==0x01)
+        {
+          ec11flag=5;
+          keys[9]=0;
+        }
+        if(htim->Instance->CR1==0x11)
+        {
+          ec11flag=5;
+          keys[9]=1;
+        }
+    }
 }
 
 /* USER CODE END 4 */

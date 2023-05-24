@@ -65,11 +65,6 @@ void Error_Handler(void);
 #define FUNCTION_KEY3_GPIO_Port GPIOA
 #define FUNCTION_KEY4_Pin GPIO_PIN_3
 #define FUNCTION_KEY4_GPIO_Port GPIOA
-#define EC11_B_Pin GPIO_PIN_6
-#define EC11_B_GPIO_Port GPIOC
-#define EC11_A_Pin GPIO_PIN_7
-#define EC11_A_GPIO_Port GPIOC
-#define EC11_A_EXTI_IRQn EXTI9_5_IRQn
 #define KNOB_Pin GPIO_PIN_15
 #define KNOB_GPIO_Port GPIOA
 #define KEY1_Pin GPIO_PIN_4
